@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans antialiased h-screen">
+
+    <div id="app" class="h-full flex items-center justify-center p-4 sm:p-6 lg:p-8" v-cloak>
+        
+        <div class="bg-white w-full max-w-4xl rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2 min-h-[550px]">
+            
+            <div class="hidden md:flex flex-col justify-between bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-10 text-white relative">
+                <div class="flex items-center gap-2 font-bold text-xl tracking-tight">
+                    <i class="fa-solid fa-store text-indigo-400"></i>
+                    <span>BizReview Hub</span>
+                </div>
+                
+                <div class="space-y-4 my-auto">
+                    <h2 class="text-3xl font-extrabold leading-tight">Control your business presence with ease.</h2>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        Join thousands of companies monitoring real-time reviews, building verified client profiles, and managing operations directly from an unified admin interface.
+                    </p>
+                </div>
+
+                <div class="text-xs text-slate-400">
+                    &copy; 2026 BizReview Hub Inc. All rights reserved.
+                </div>
+            </div>
+
+            <div class="p-8 sm:p-12 flex flex-col justify-center bg-white relative">
+                
+                <div v-if="isLoginView" class="space-y-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-900">Welcome Back</h3>
+                        <p class="text-sm text-gray-500 mt-1">Sign in to manage your company account.</p>
+                    </div>
+
+                    <form @submit.prevent="handleLogin" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Email Address</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                    <i class="fa-solid fa-envelope text-xs"></i>
+                                </span>
+                                <input v-model="loginForm.email" type="email" required placeholder="name@company.com" 
+                                    class="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Password</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                    <i class="fa-solid fa-lock text-xs"></i>
+                                </span>
+                                <input v-model="loginForm.password" type="password" required placeholder="••••••••" 
+                                    class="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            </div>
+                        </div>
+
+                        <button type="submit" :disabled="submitting" 
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-3 rounded-lg shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
+                            <i v-if="submitting" class="fa-solid fa-circle-notch animate-spin"></i>
+                            {{ submitting ? 'Signing In...' : 'Sign In' }}
+                        </button>
+                    </form>
+
+                    <div class="text-center pt-2">
+                        <p class="text-sm text-gray-600">
+                            New to our platform? 
+                            <button @click="isLoginView = false" class="text-indigo-600 font-semibold hover:underline bg-transparent border-none p-0 cursor-pointer">
+                                Create an account
+                            </button>
+                        </p>
+                    </div>
+                </div>
+
+                <div v-else class="space-y-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-900">Get Started</h3>
+                        <p class="text-sm text-gray-500 mt-1">Register your account or business dashboard today.</p>
+                    </div>
+
+                    <form @submit.prevent="handleRegister" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Account Type</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label :class="registerForm.role === 'customer' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900' : 'border-gray-200'" class="border rounded-lg p-2 text-center cursor-pointer text-xs font-medium flex items-center justify-center gap-1.5 transition">
+                                    <input type="radio" v-model="registerForm.role" value="customer" class="sr-only">
+                                    <i class="fa-solid fa-user"></i> Customer
+                                </label>
+                                <label :class="registerForm.role === 'company' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900' : 'border-gray-200'" class="border rounded-lg p-2 text-center cursor-pointer text-xs font-medium flex items-center justify-center gap-1.5 transition">
+                                    <input type="radio" v-model="registerForm.role" value="company" class="sr-only">
+                                    <i class="fa-solid fa-building"></i> Company
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Full Name / business title</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                    <i class="fa-solid fa-id-card text-xs"></i>
+                                </span>
+                                <input v-model="registerForm.name" type="text" required placeholder="Alex Mercer" 
+                                    class="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Email Address</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                    <i class="fa-solid fa-envelope text-xs"></i>
+                                </span>
+                                <input v-model="registerForm.email" type="email" required placeholder="name@domain.com" 
+                                    class="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Password</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                    <i class="fa-solid fa-lock text-xs"></i>
+                                </span>
+                                <input v-model="registerForm.password" type="password" required placeholder="Min 6 characters" 
+                                    class="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Confirm Password</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                    <i class="fa-solid fa-shield text-xs"></i>
+                                </span>
+                                <input v-model="registerForm.passwordConfirm" type="password" required placeholder="Verify password" 
+                                    class="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            </div>
+                            <p v-if="passwordMismatch" class="text-xs text-red-500 mt-1 font-medium">
+                                <i class="fa-solid fa-circle-exclamation"></i> Passwords do not match.
+                            </p>
+                        </div>
+
+                        <button type="submit" :disabled="submitting || passwordMismatch" 
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-3 rounded-lg shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
+                            <i v-if="submitting" class="fa-solid fa-circle-notch animate-spin"></i>
+                            {{ submitting ? 'Creating Account...' : 'Register Account' }}
+                        </button>
+                    </form>
+
+                    <div class="text-center pt-2">
+                        <p class="text-sm text-gray-600">
+                            Already have an account? 
+                            <button @click="isLoginView = true" class="text-indigo-600 font-semibold hover:underline bg-transparent border-none p-0 cursor-pointer">
+                                Sign in here
+                            </button>
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                // View toggle: true = Show Login, false = Show Registration
+                const isLoginView = ref(true);
+                const submitting = ref(false);
+
+                // Login Form reactive payload state
+                const loginForm = ref({
+                    email: '',
+                    password: ''
+                });
+
+                // Registration Form reactive payload state
+                const registerForm = ref({
+                    role: 'customer', // default selector variant
+                    name: '',
+                    email: '',
+                    password: '',
+                    passwordConfirm: ''
+                });
+
+                // Checks live password matching inputs variables
+                const passwordMismatch = computed(() => {
+                    if (!registerForm.value.passwordConfirm) return false;
+                    return registerForm.value.password !== registerForm.value.passwordConfirm;
+                });
+
+                // Form submission handlers (Ready for your API backend connection)
+                const handleLogin = () => {
+                    submitting.value = true;
+                    
+                    // Mocking network processing delay
+                    setTimeout(() => {
+                        submitting.value = false;
+                        alert(`Successfully authenticated as: ${loginForm.value.email}\nRedirecting to dashboard...`);
+                        
+                        // Clear fields
+                        loginForm.value.email = '';
+                        loginForm.value.password = '';
+                    }, 1000);
+                };
+
+                const handleRegister = () => {
+                    if (passwordMismatch.value) return;
+                    submitting.value = true;
+
+                    setTimeout(() => {
+                        submitting.value = false;
+                        alert(`Account successfully requested for ${registerForm.value.name} as a [${registerForm.value.role}]!\nYou can now sign in.`);
+                        
+                        // Reset register values & redirect to view login form screen automatically
+                        registerForm.value = { role: 'customer', name: '', email: '', password: '', passwordConfirm: '' };
+                        isLoginView.value = true;
+                    }, 1200);
+                };
+
+                return {
+                    isLoginView,
+                    submitting,
+                    loginForm,
+                    registerForm,
+                    passwordMismatch,
+                    handleLogin,
+                    handleRegister
+                };
+            }
+        }).mount('#app');
+    </script>
+
+    <style>
+        [v-cloak] { display: none; }
+    </style>
+</body>
+</html>

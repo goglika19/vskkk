@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logged-In Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans antialiased text-gray-900">
+
+    <div id="app" class="min-h-screen flex flex-col" v-cloak>
+        
+        <div class="bg-slate-900 text-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-800">
+            <div class="flex items-center gap-2">
+                <span class="bg-indigo-500 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider text-white">Testing Switcher</span>
+                <span class="text-slate-400">Change your active logged-in session role:</span>
+            </div>
+            <div class="flex gap-2">
+                <button @click="switchUser('customer')" :class="currentUser.role === 'customer' ? 'bg-indigo-600 text-white font-semibold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-3 py-1 rounded transition">
+                    <i class="fa-solid fa-user mr-1"></i> Act as Customer (John Doe)
+                </button>
+                <button @click="switchUser('company')" :class="currentUser.role === 'company' ? 'bg-emerald-600 text-white font-semibold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'" class="px-3 py-1 rounded transition">
+                    <i class="fa-solid fa-building mr-1"></i> Act as Company (Apex Global)
+                </button>
+            </div>
+        </div>
+
+        <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40 px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <i class="fa-solid fa-comments text-indigo-600 text-xl"></i>
+                <span class="font-bold text-lg tracking-tight">Portal Workspace</span>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div :class="currentUser.role === 'customer' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shadow-inner">
+                    {{ currentUser.name.charAt(0) }}
+                </div>
+                <div class="text-left hidden sm:block">
+                    <p class="text-sm font-semibold text-gray-900 leading-none">{{ currentUser.name }}</p>
+                    <span class="text-[11px] text-gray-400 capitalize font-medium">{{ currentUser.role }} Session</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex-1 grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <div class="md:col-span-1 space-y-6">
+                
+                <div v-if="currentUser.role === 'customer'" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 space-y-4">
+                    <div>
+                        <h2 class="font-bold text-gray-900 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square text-indigo-500"></i> Write a Review
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Share your real experience regarding partnered companies.</p>
+                    </div>
+
+                    <form @submit.prevent="submitReview" class="space-y-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-600 uppercase mb-1">Target Company</label>
+                            <select v-model="newReview.companyId" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option v-for="c in companiesList" :key="c.id" :value="c.id">{{ c.name }}</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-600 uppercase mb-1">Your Rating</label>
+                            <div class="flex items-center gap-1.5 text-xl text-amber-400">
+                                <button type="button" v-for="star in 5" :key="star" @click="newReview.rating = star" class="hover:scale-110 transition focus:outline-none">
+                                    <i :class="star <= newReview.rating ? 'fa-solid fa-star' : 'fa-regular fa-star text-gray-300'"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-600 uppercase mb-1">Your Comment</label>
+                            <textarea v-model="newReview.comment" rows="4" required placeholder="Describe your service encounter..." 
+                                class="w-full bg-gray-50 border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs uppercase tracking-wider py-2.5 rounded-lg transition shadow-sm">
+                            Publish Review
+                        </button>
+                    </form>
+                </div>
+
+                <div v-if="currentUser.role === 'company'" class="bg-gradient-to-br from-slate-900 to-indigo-950 p-6 rounded-2xl shadow-sm text-white space-y-4">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-briefcase"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg">Corporate Hub</h3>
+                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+                            You are verified as a manager for <span class="text-emerald-400 font-semibold">{{ currentUser.name }}</span>. You have authority to post text statements directly addressing client feedback fields.
+                        </p>
+                    </div>
+                    <div class="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50 text-[11px] text-slate-400">
+                        <i class="fa-solid fa-shield-halved text-amber-400 mr-1"></i> Responses will appear automatically marked with an official corporate badge.
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="md:col-span-2 space-y-4">
+                <h2 class="font-bold text-gray-800 text-sm uppercase tracking-wider px-1">
+                    {{ currentUser.role === 'company' ? 'Reviews Sent to Your Company' : 'Live Platform Review Stream' }}
+                </h2>
+
+                <div v-if="visibleReviews.length === 0" class="bg-white p-12 text-center rounded-2xl border border-dashed border-gray-300 text-gray-400">
+                    <i class="fa-regular fa-folder-open text-3xl mb-2"></i>
+                    <p class="text-sm">No reviews found matching your tracking matrix layout.</p>
+                </div>
+
+                <div v-for="review in visibleReviews" :key="review.id" class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4 transition hover:shadow-md">
+                    
+                    <div class="flex justify-between items-start gap-4">
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-bold text-gray-900 text-sm">{{ review.customerName }}</span>
+                                <span class="text-[11px] text-gray-400">to</span>
+                                <span class="text-xs bg-gray-100 text-gray-700 font-semibold px-2 py-0.5 rounded">{{ getCompanyName(review.companyId) }}</span>
+                            </div>
+                            <p class="text-gray-700 text-sm mt-1.5 italic font-serif">"{{ review.comment }}"</p>
+                        </div>
+                        <div class="flex text-amber-400 text-xs gap-0.5">
+                            <i v-for="s in review.rating" class="fa-solid fa-star"></i>
+                            <i v-for="s in (5 - review.rating)" class="fa-regular fa-star text-gray-200"></i>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div v-for="reply in review.replies" :key="reply.id" class="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4 ml-6 space-y-1">
+                            <div class="flex items-center gap-1.5 text-xs text-emerald-800 font-bold">
+                                <i class="fa-solid fa-circle-check text-emerald-600 text-[10px]"></i>
+                                <span>Official Reply from {{ reply.authorName }}</span>
+                            </div>
+                            <p class="text-gray-700 text-xs leading-relaxed font-sans">{{ reply.text }}</p>
+                        </div>
+
+                        <div v-if="currentUser.role === 'company' && currentUser.id === review.companyId" class="ml-6 pt-2">
+                            
+                            <button v-if="activeReplyId !== review.id" @click="activeReplyId = review.id; replyText = ''" 
+                                class="text-xs text-emerald-600 font-semibold hover:text-emerald-700 flex items-center gap-1 transition focus:outline-none">
+                                <i class="fa-solid fa-reply"></i> Write a response reply
+                            </button>
+
+                            <div v-else class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                <textarea v-model="replyText" rows="2" placeholder="Address customer concerns professionally..." 
+                                    class="w-full bg-white border border-gray-300 rounded-lg p-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                                <div class="flex justify-end gap-2">
+                                    <button @click="activeReplyId = null" class="text-[11px] px-2.5 py-1 text-gray-500 font-medium hover:bg-gray-200 rounded transition">
+                                        Cancel
+                                    </button>
+                                    <button @click="submitReply(review)" :disabled="!replyText.trim()" class="text-[11px] px-3 py-1 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700 transition disabled:opacity-50">
+                                        Post Reply
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                // Testing Users Data Structures
+                const userProfiles = {
+                    customer: { id: 101, name: 'John Doe', role: 'customer' },
+                    company: { id: 1, name: 'Apex Global', role: 'company' }
+                };
+
+                // Track Current Mock Session
+                const currentUser = ref({ ...userProfiles.customer });
+
+                // Static reference list for display mappings
+                const companiesList = ref([
+                    { id: 1, name: 'Apex Global' },
+                    { id: 2, name: 'Sovereign Logistics' }
+                ]);
+
+                // Primary Mock Feed Array State
+                const reviewsFeed = ref([
+                    { 
+                        id: 1, 
+                        customerName: 'Jane Smith', 
+                        companyId: 1, 
+                        comment: 'Software works well, but we need API document formatting extensions.', 
+                        rating: 4,
+                        replies: [
+                            { id: 11, authorName: 'Apex Global', text: 'Thank you Jane! Our document extensions package drops late next quarter.' }
+                        ]
+                    },
+                    { 
+                        id: 2, 
+                        customerName: 'John Doe', 
+                        companyId: 2, 
+                        comment: 'Logistics cargo was heavily late on arrival.', 
+                        rating: 2,
+                        replies: []
+                    },
+                    { 
+                        id: 3, 
+                        customerName: 'Mark Fletcher', 
+                        companyId: 1, 
+                        comment: 'Customer support answered inside 4 minutes. Stunning attention detail.', 
+                        rating: 5,
+                        replies: []
+                    }
+                ]);
+
+                // Write Review Local Form Buffer State
+                const newReview = ref({
+                    companyId: 1,
+                    rating: 5,
+                    comment: ''
+                });
+
+                // Reply Buffer state management hooks
+                const activeReplyId = ref(null);
+                const replyText = ref('');
+
+                // Computes what to show based on who views the timeline
+                const visibleReviews = computed(() => {
+                    // If Company is logged in, show only reviews sent to them to keep things clean
+                    if(currentUser.value.role === 'company') {
+                        return reviewsFeed.value.filter(r => r.companyId === currentUser.value.id);
+                    }
+                    // Customers see all items on the global timeline stream
+                    return reviewsFeed.value;
+                });
+
+                // Testing Action Switcher Helper
+                const switchUser = (roleType) => {
+                    currentUser.value = { ...userProfiles[roleType] };
+                    activeReplyId.value = null; // Clear open reply fields
+                };
+
+                const getCompanyName = (id) => {
+                    const match = companiesList.value.find(c => c.id === id);
+                    return match ? match.name : 'Unknown Corp';
+                };
+
+                // ACTION: Customer Form Submission
+                const submitReview = () => {
+                    if(!newReview.value.comment.trim()) return;
+
+                    // Unshift adds new entry to the top of the collection array instantly
+                    reviewsFeed.value.unshift({
+                        id: Date.now(),
+                        customerName: currentUser.value.name,
+                        companyId: newReview.value.companyId,
+                        comment: newReview.value.comment,
+                        rating: newReview.value.rating,
+                        replies: []
+                    });
+
+                    // Clear form text field
+                    newReview.value.comment = '';
+                    alert("Review successfully published onto the dashboard stream!");
+                };
+
+                // ACTION: Company Reply Submission
+                const submitReply = (targetReview) => {
+                    if(!replyText.value.trim()) return;
+
+                    targetReview.replies.push({
+                        id: Date.now(),
+                        authorName: currentUser.value.name,
+                        text: replyText.value
+                    });
+
+                    // Clean out buffers
+                    replyText.value = '';
+                    activeReplyId.value = null;
+                };
+
+                return {
+                    currentUser,
+                    companiesList,
+                    reviewsFeed,
+                    newReview,
+                    activeReplyId,
+                    replyText,
+                    visibleReviews,
+                    switchUser,
+                    getCompanyName,
+                    submitReview,
+                    submitReply
+                };
+            }
+        }).mount('#app');
+    </script>
+
+    <style>
+        [v-cloak] { display: none; }
+    </style>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <div id="app" class="flex h-screen overflow-hidden" v-cloak>
+        
+        <div class="w-64 bg-slate-900 text-white flex flex-col">
+            <div class="p-5 text-2xl font-bold tracking-wider border-b border-slate-800 flex items-center gap-3">
+                <i class="fa-solid fa-gauge-high text-indigo-400"></i>
+                <span>AdminPanel</span>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <button @click="currentTab = 'dashboard'" :class="navClass('dashboard')">
+                    <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
+                </button>
+                <button @click="currentTab = 'companies'" :class="navClass('companies')">
+                    <i class="fa-solid fa-building w-6"></i> Companies
+                </button>
+                <button @click="currentTab = 'customers'" :class="navClass('customers')">
+                    <i class="fa-solid fa-users w-6"></i> Customers
+                </button>
+                <button @click="currentTab = 'reviews'" :class="navClass('reviews')">
+                    <i class="fa-solid fa-comments w-6"></i> Reviews
+                    <span v-if="pendingReviewsCount" class="ml-auto bg-red-500 text-xs px-2 py-0.5 rounded-full">
+                        {{ pendingReviewsCount }}
+                    </span>
+                </button>
+            </nav>
+            <div class="p-4 border-t border-slate-800 text-sm text-slate-400">
+                Logged in as <strong>Admin</strong>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col overflow-y-auto">
+            
+            <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center header-sticky top-0 z-10">
+                <h1 class="text-2xl font-semibold text-gray-800 capitalize">{{ currentTab }} Management</h1>
+                <div class="flex items-center gap-4">
+                    <span class="text-gray-600 text-sm">July 5, 2026</span>
+                    <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
+                        A
+                    </div>
+                </div>
+            </header>
+
+            <main class="p-8 flex-1">
+                
+                <div v-if="currentTab === 'dashboard'" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium uppercase tracking-wider">Total Companies</p>
+                                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ companies.length }}</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-building"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium uppercase tracking-wider">Active Customers</p>
+                                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ activeCustomersCount }}</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-green-50 text-green-600 rounded-lg flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium uppercase tracking-wider">Total Reviews</p>
+                                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ reviews.length }}</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-comments"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-50 border border-indigo-100 text-indigo-800 p-4 rounded-xl flex items-start gap-3">
+                        <i class="fa-solid fa-circle-info mt-1"></i>
+                        <div>
+                            <span class="font-semibold">Admin Tip:</span> Use the sidebar to moderate reviews, change company activation statuses, or review customer lists instantly.
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="currentTab === 'companies'" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 border-b border-gray-200 text-gray-700 text-xs uppercase tracking-wider font-semibold">
+                            <tr>
+                                <th class="p-4">Company Name</th>
+                                <th class="p-4">Industry</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 text-sm text-gray-600">
+                            <tr v-for="company in companies" :key="company.id" class="hover:bg-gray-50 transition">
+                                <td class="p-4 font-medium text-gray-900">{{ company.name }}</td>
+                                <td class="p-4">{{ company.industry }}</td>
+                                <td class="p-4">
+                                    <span :class="company.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" class="px-2.5 py-1 rounded-full text-xs font-medium">
+                                        {{ company.active ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td class="p-4 text-right space-x-2">
+                                    <button @click="toggleStatus(company)" class="text-xs font-semibold px-3 py-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 text-gray-700">
+                                        {{ company.active ? 'Deactivate' : 'Activate' }}
+                                    </button>
+                                    <button @click="deleteItem(companies, company.id)" class="text-xs font-semibold px-3 py-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-if="currentTab === 'customers'" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 border-b border-gray-200 text-gray-700 text-xs uppercase tracking-wider font-semibold">
+                            <tr>
+                                <th class="p-4">Customer</th>
+                                <th class="p-4">Email</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 text-sm text-gray-600">
+                            <tr v-for="customer in customers" :key="customer.id" class="hover:bg-gray-50 transition">
+                                <td class="p-4 font-medium text-gray-900">{{ customer.name }}</td>
+                                <td class="p-4">{{ customer.email }}</td>
+                                <td class="p-4">
+                                    <span :class="customer.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" class="px-2.5 py-1 rounded-full text-xs font-medium">
+                                        {{ customer.active ? 'Active' : 'Suspended' }}
+                                    </span>
+                                </td>
+                                <td class="p-4 text-right space-x-2">
+                                    <button @click="toggleStatus(customer)" class="text-xs font-semibold px-3 py-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 text-gray-700">
+                                        {{ customer.active ? 'Suspend' : 'Activate' }}
+                                    </button>
+                                    <button @click="deleteItem(customers, customer.id)" class="text-xs font-semibold px-3 py-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-if="currentTab === 'reviews'" class="space-y-4">
+                    <div v-if="reviews.length === 0" class="text-center py-12 text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
+                        No reviews found.
+                    </div>
+                    
+                    <div v-for="review in reviews" :key="review.id" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition" :class="{'opacity-60 bg-gray-50': !review.visible}">
+                        <div class="space-y-1 flex-1">
+                            <div class="flex items-center gap-3">
+                                <span class="font-semibold text-gray-900">{{ review.customerName }}</span>
+                                <span class="text-xs text-gray-400">reviewed</span>
+                                <span class="text-sm font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{{ review.companyName }}</span>
+                                
+                                <span v-if="!review.visible" class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-medium">
+                                    <i class="fa-solid fa-eye-slash text-[10px]"></i> Hidden
+                                </span>
+                                <span v-else class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full font-medium">
+                                    <i class="fa-solid fa-eye text-[10px]"></i> Live
+                                </span>
+                            </div>
+                            <p class="text-gray-700 pt-1 italic">"{{ review.comment }}"</p>
+                            <div class="flex text-amber-400 text-xs gap-0.5 pt-1">
+                                <i v-for="star in review.rating" class="fa-solid fa-star"></i>
+                                <i v-for="star in (5 - review.rating)" class="fa-regular fa-star text-gray-300"></i>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 self-end md:self-center">
+                            <button @click="review.visible = !review.visible" :class="review.visible ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-green-50 text-green-700 hover:bg-green-100'" class="text-xs font-semibold px-3 py-2 rounded flex items-center gap-1.5">
+                                <i :class="review.visible ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+                                {{ review.visible ? 'Hide Review' : 'Approve/Show' }}
+                            </button>
+                            <button @click="deleteItem(reviews, review.id)" class="text-xs font-semibold px-3 py-2 rounded bg-red-50 hover:bg-red-100 text-red-600 flex items-center gap-1.5">
+                                <i class="fa-solid fa-trash-can"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                // Current View Tab
+                const currentTab = ref('dashboard');
+
+                // Mock Data for Companies
+                const companies = ref([
+                    { id: 1, name: 'Apex Global', industry: 'Technology', active: true },
+                    { id: 2, name: 'Sovereign Logistics', industry: 'Transport', active: true },
+                    { id: 3, name: 'Quantum Labs', industry: 'Healthcare', active: false },
+                ]);
+
+                // Mock Data for Customers
+                const customers = ref([
+                    { id: 1, name: 'John Doe', email: 'john@example.com', active: true },
+                    { id: 2, name: 'Jane Smith', email: 'jane@example.com', active: true },
+                    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', active: false },
+                ]);
+
+                // Mock Data for Comments / Reviews
+                const reviews = ref([
+                    { id: 1, customerName: 'John Doe', companyName: 'Apex Global', comment: 'Amazing software solutions, helped our efficiency drastically!', rating: 5, visible: true },
+                    { id: 2, customerName: 'Jane Smith', companyName: 'Sovereign Logistics', comment: 'Shipping was delayed by two days. Customer service was okay.', rating: 3, visible: true },
+                    { id: 3, customerName: 'Bob Johnson', companyName: 'Quantum Labs', comment: 'Spammy interface. I want to cancel my trial immediately.', rating: 1, visible: false },
+                ]);
+
+                // Helper navigation class generator
+                const navClass = (tab) => {
+                    const base = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 text-left ";
+                    return base + (currentTab.value === tab 
+                        ? "bg-indigo-600 text-white" 
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white");
+                };
+
+                // Toggle logic for Status (Active / Inactive)
+                const toggleStatus = (item) => {
+                    item.active = !item.active;
+                };
+
+                // Universal delete handler
+                const deleteItem = (array, id) => {
+                    if(confirm("Are you sure you want to delete this permanently?")) {
+                        const index = array.findIndex(item => item.id === id);
+                        if (index !== -1) array.splice(index, 1);
+                    }
+                };
+
+                // Computed metrics
+                const activeCustomersCount = computed(() => customers.value.filter(c => c.active).length);
+                const pendingReviewsCount = computed(() => reviews.value.filter(r => !r.visible).length);
+
+                return {
+                    currentTab,
+                    companies,
+                    customers,
+                    reviews,
+                    navClass,
+                    toggleStatus,
+                    deleteItem,
+                    activeCustomersCount,
+                    pendingReviewsCount
+                };
+            }
+        }).mount('#app');
+    </script>
+
+    <style>
+        /* Prevents raw Vue braces from showing briefly during load */
+        [v-cloak] { display: none; }
+    </style>
+</body>
+</html>

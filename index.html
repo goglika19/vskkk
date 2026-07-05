@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Directory & Reviews</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-sans antialiased text-gray-900 flex flex-col min-h-screen">
+
+    <div id="app" class="flex flex-col flex-1" v-cloak>
+        <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center gap-8">
+                        <div class="flex items-center gap-3 cursor-pointer" @click="currentView = 'directory'">
+                            <i class="fa-solid fa-truck-fast text-2xl text-indigo-600 animate-pulse"></i>
+                            <span class="text-xl font-bold tracking-tight text-gray-900">BizReview Hub</span>
+                        </div>
+                        
+                        <div class="hidden md:flex items-center space-x-6 text-sm font-medium text-gray-600">
+                            <button @click="currentView = 'directory'" :class="currentView === 'directory' ? 'text-indigo-600' : 'hover:text-indigo-600 transition'">{{ t('directory') }}</button>
+                            <button @click="currentView = 'about'" :class="currentView === 'about' ? 'text-indigo-600' : 'hover:text-indigo-600 transition'">{{ t('aboutUs') }}</button>
+                            <button @click="currentView = 'blog'" :class="currentView === 'blog' ? 'text-indigo-600' : 'hover:text-indigo-600 transition'">{{ t('newsBlog') }}</button>
+                            <button @click="currentView = 'support'" :class="currentView === 'support' ? 'text-indigo-600' : 'hover:text-indigo-600 transition'">{{ t('support') }}</button>
+                            <button @click="currentView = 'contact'" :class="currentView === 'contact' ? 'text-indigo-600' : 'hover:text-indigo-600 transition'">{{ t('contact') }}</button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <button v-if="currentView === 'directory'" @click="refreshData" class="hidden lg:flex text-sm font-medium text-gray-600 hover:text-indigo-600 items-center gap-1.5 transition">
+                            <i class="fa-solid fa-rotate animate-spin-slow" :class="{ 'animate-spin': loading }"></i>
+                            {{ t('refreshFeed') }}
+                        </button>
+                        
+                        <div class="relative">
+                            <select v-model="currentLang" class="bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 px-2 py-2 rounded-lg focus:outline-none focus:border-indigo-500 cursor-pointer transition">
+                                <option value="en">🇬🇧 EN</option>
+                                <option value="ka">🇬🇪 კა</option>
+                                <option value="ru">🇷🇺 RU</option>
+                            </select>
+                        </div>
+
+                        <button @click="loginModalOpen = true" class="text-xs sm:text-sm font-semibold bg-indigo-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-indigo-700 shadow-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                            <span class="hidden sm:inline">{{ t('signIn') }}</span>
+                        </button>
+                        
+                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-gray-600 focus:outline-none">
+                            <i :class="mobileMenuOpen ? 'fa-solid fa-xmark text-xl' : 'fa-solid fa-bars text-xl'"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="mobileMenuOpen" class="md:hidden bg-white border-t border-gray-100 px-4 pt-2 pb-4 space-y-1 shadow-inner">
+                <button @click="currentView = 'directory'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600">{{ t('directory') }}</button>
+                <button @click="currentView = 'about'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600">{{ t('aboutUs') }}</button>
+                <button @click="currentView = 'blog'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600">{{ t('newsBlog') }}</button>
+                <button @click="currentView = 'support'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600">{{ t('support') }}</button>
+                <button @click="currentView = 'contact'; mobileMenuOpen = false" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600">{{ t('contact') }}</button>
+            </div>
+        </nav>
+
+        <div v-if="loginModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div @click="loginModalOpen = false" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+            
+            <div class="bg-white rounded-xl shadow-xl border border-gray-100 w-full max-w-sm p-6 relative z-10 space-y-5 animate-fade-in">
+                <div class="flex justify-between items-start">
+                    <div class="space-y-1">
+                        <h3 class="text-xl font-bold text-gray-900">{{ t('signIn') }}</h3>
+                        <p class="text-xs text-gray-400">{{ t('modalSub') }}</p>
+                    </div>
+                    <button @click="loginModalOpen = false" class="text-gray-400 hover:text-gray-600 transition">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <form @submit.prevent="loginModalOpen = false" class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('email') }}</label>
+                        <input type="email" placeholder="admin@bizhub.com" required class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('securityToken') }}</label>
+                        <input type="password" placeholder="••••••••" required class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                    <button type="submit" class="w-full text-sm font-semibold bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 transition shadow-sm">
+                        {{ t('authenticate') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div v-if="currentView === 'directory'" class="flex flex-col flex-1">
+            <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-12 px-4 text-center">
+                <div class="max-w-3xl mx-auto space-y-3">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">{{ t('heroTitle') }}</h1>
+                    <p class="text-indigo-200 text-base sm:text-lg max-w-xl mx-auto">
+                        {{ t('heroSub') }}
+                    </p>
+                </div>
+            </header>
+
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full">
+                <div v-if="loading" class="flex flex-col items-center justify-center py-20 space-y-4">
+                    <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-gray-500 font-medium text-sm animate-pulse">{{ t('loading') }}</p>
+                </div>
+
+                <div v-else-if="error" class="bg-red-50 border border-red-200 p-6 rounded-xl text-center max-w-md mx-auto space-y-3">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl text-red-500"></i>
+                    <h3 class="text-lg font-semibold text-red-800">API Connection Failed</h3>
+                    <p class="text-sm text-red-600">{{ error }}</p>
+                    <button @click="refreshData" class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition text-sm">
+                        Try Reconnecting
+                    </button>
+                </div>
+
+                <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                                <h2 class="font-bold text-gray-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-building text-indigo-500"></i> {{ t('companies') }}
+                                </h2>
+                                <span class="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
+                                    {{ targetCompanies.length }} {{ t('available') }}
+                                </span>
+                            </div>
+                            <div class="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                                <button 
+                                    v-for="comp in targetCompanies" 
+                                    :key="comp.id"
+                                    @click="selectedCompanyId = comp.id"
+                                    :class="selectedCompanyId === comp.id ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 font-semibold' : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'"
+                                    class="w-full text-left p-3 rounded-lg border text-sm transition flex items-center justify-between group"
+                                >
+                                    <div>
+                                        <p class="group-hover:text-indigo-600 transition">{{ comp.name }}</p>
+                                        <span class="text-xs text-gray-400 font-normal">{{ comp.industry }}</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs transition opacity-0 group-hover:opacity-100 text-indigo-500" :class="{'opacity-100 text-indigo-600': selectedCompanyId === comp.id}"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                                <h2 class="font-bold text-gray-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-users text-emerald-500"></i> {{ t('reviewers') }}
+                                </h2>
+                            </div>
+                            <div class="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+                                <div v-for="cust in targetCustomers" :key="cust.id" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition">
+                                    <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                                        {{ cust.name.charAt(0) }}
+                                    </div>
+                                    <div class="text-xs">
+                                        <p class="font-semibold text-gray-800">{{ cust.name }}</p>
+                                        <p class="text-gray-400">{{ cust.email }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2 space-y-6">
+                        <div v-if="activeCompany" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">{{ activeCompany.industry }} Solutions</span>
+                                <h2 class="text-2xl font-bold text-gray-900 mt-0.5">{{ activeCompany.name }}</h2>
+                                <p class="text-xs text-gray-400 mt-1">
+                                    <i class="fa-solid fa-circle-check text-emerald-500"></i> {{ t('verifiedStatus') }}
+                                </p>
+                            </div>
+                            <div class="bg-slate-50 px-4 py-3 rounded-lg border border-gray-100 flex items-center gap-3 w-full sm:w-auto">
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-gray-800">{{ companyAverageRating }}</p>
+                                    <p class="text-[10px] text-gray-400 font-medium uppercase">{{ t('avgRating') }}</p>
+                                </div>
+                                <div class="h-8 w-px bg-gray-200"></div>
+                                <div>
+                                    <div class="flex text-amber-400 text-xs gap-0.5">
+                                        <i v-for="star in Math.round(parseFloat(companyAverageRating))" class="fa-solid fa-star"></i>
+                                        <i v-for="star in (5 - Math.round(parseFloat(companyAverageRating)))" class="fa-regular fa-star text-gray-200"></i>
+                                    </div>
+                                    <p class="text-xs text-gray-500 font-medium mt-0.5">{{ filteredReviews.length }} {{ t('globalReviews') }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h3 class="font-bold text-gray-800 text-sm uppercase tracking-wider px-1">{{ t('testimonials') }}</h3>
+
+                            <div v-if="filteredReviews.length === 0" class="bg-white p-12 text-center rounded-xl border border-dashed border-gray-300 text-gray-400 space-y-2">
+                                <i class="fa-regular fa-comment-dots text-4xl text-gray-300"></i>
+                                <p class="text-sm">No administrative-approved reviews are currently listed for this company.</p>
+                            </div>
+
+                            <div 
+                                v-else 
+                                v-for="review in filteredReviews" 
+                                :key="review.id" 
+                                class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-3 hover:shadow-md transition duration-200"
+                            >
+                                <div class="flex justify-between items-start gap-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center">
+                                            {{ review.customerName.charAt(0) }}
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-sm">{{ review.customerName }}</h4>
+                                            <p class="text-[11px] text-gray-400">Verified Reviewer</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex text-amber-400 text-xs gap-0.5 bg-amber-50/60 px-2 py-1 rounded border border-amber-100">
+                                        <i v-for="star in review.rating" class="fa-solid fa-star"></i>
+                                        <i v-for="star in (5 - review.rating)" class="fa-regular fa-star text-gray-200"></i>
+                                    </div>
+                                </div>
+                                <p class="text-gray-700 text-sm leading-relaxed italic font-serif">
+                                    "{{ review.comment }}"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <div v-if="currentView === 'about'" class="flex flex-col flex-1">
+            <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-12 px-4 text-center">
+                <div class="max-w-3xl mx-auto space-y-3">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">{{ t('aboutVision') }}</h1>
+                    <p class="text-indigo-200 text-base sm:text-lg max-w-xl mx-auto">{{ t('aboutVisionSub') }}</p>
+                </div>
+            </header>
+            <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full">
+                <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm space-y-6">
+                    <div class="space-y-2">
+                        <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-info text-indigo-500"></i> {{ t('aboutUs') }}
+                        </h2>
+                        <p class="text-sm text-gray-600 leading-relaxed">{{ t('aboutDesc') }}</p>
+                    </div>
+                    <hr class="border-gray-100">
+                    <button @click="currentView = 'directory'" class="text-xs font-semibold bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 w-fit">
+                        <i class="fa-solid fa-arrow-left"></i> {{ t('returnDir') }}
+                    </button>
+                </div>
+            </main>
+        </div>
+
+        <div v-if="currentView === 'blog'" class="flex flex-col flex-1">
+            <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-12 px-4 text-center">
+                <div class="max-w-3xl mx-auto space-y-3">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">{{ t('blogTitle') }}</h1>
+                    <p class="text-indigo-200 text-base sm:text-lg max-w-xl mx-auto">{{ t('blogSub') }}</p>
+                </div>
+            </header>
+            <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full">
+                <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center py-16 space-y-4">
+                    <div class="w-14 h-14 bg-indigo-50 text-indigo-600 flex items-center justify-center rounded-full mx-auto text-xl shadow-inner">
+                        <i class="fa-regular fa-newspaper"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-base font-bold text-gray-900">{{ t('feedEmpty') }}</h3>
+                        <p class="text-xs text-gray-400 max-w-xs mx-auto">{{ t('feedEmptySub') }}</p>
+                    </div>
+                    <button @click="currentView = 'directory'" class="text-xs font-semibold bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition mx-auto flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-left"></i> {{ t('returnDir') }}
+                    </button>
+                </div>
+            </main>
+        </div>
+
+        <div v-if="currentView === 'support'" class="flex flex-col flex-1">
+            <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-12 px-4 text-center">
+                <div class="max-w-3xl mx-auto space-y-3">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">{{ t('supportTitle') }}</h1>
+                    <p class="text-indigo-200 text-base sm:text-lg max-w-xl mx-auto">{{ t('supportSub') }}</p>
+                </div>
+            </header>
+            <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full">
+                <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm space-y-6">
+                    <div class="space-y-2">
+                        <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <i class="fa-solid fa-headset text-indigo-500"></i> {{ t('supportHeading') }}
+                        </h2>
+                        <p class="text-sm text-gray-600 leading-relaxed">{{ t('supportDesc') }}</p>
+                    </div>
+                    <hr class="border-gray-100">
+                    <button @click="currentView = 'directory'" class="text-xs font-semibold bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 w-fit">
+                        <i class="fa-solid fa-arrow-left"></i> {{ t('returnDir') }}
+                    </button>
+                </div>
+            </main>
+        </div>
+
+        <div v-if="currentView === 'contact'" class="flex flex-col flex-1">
+            <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-12 px-4 text-center">
+                <div class="max-w-3xl mx-auto space-y-3">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">{{ t('contactTitle') }}</h1>
+                    <p class="text-indigo-200 text-base sm:text-lg max-w-xl mx-auto">{{ t('contactSub') }}</p>
+                </div>
+            </header>
+            <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full">
+                <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm space-y-6">
+                    <div class="space-y-2">
+                        <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <i class="fa-regular fa-envelope text-indigo-500"></i> {{ t('contactHeading') }}
+                        </h2>
+                        <p class="text-sm text-gray-600 leading-relaxed">{{ t('contactDesc') }}</p>
+                    </div>
+                    <hr class="border-gray-100">
+                    <button @click="currentView = 'directory'" class="text-xs font-semibold bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 w-fit">
+                        <i class="fa-solid fa-arrow-left"></i> {{ t('returnDir') }}
+                    </button>
+                </div>
+            </main>
+        </div>
+
+        <footer class="bg-white border-t border-gray-200 text-gray-500 text-xs mt-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <div>
+                    <p class="font-bold text-gray-800 text-sm">BizReview Hub</p>
+                    <p class="mt-1">{{ t('footerText') }}</p>
+                </div>
+                <div class="flex space-x-4 md:justify-center">
+                    <button @click="currentView = 'about'" class="hover:text-indigo-600 transition">{{ t('aboutUs') }}</button>
+                    <button @click="currentView = 'support'" class="hover:text-indigo-600 transition">{{ t('support') }}</button>
+                    <button @click="currentView = 'contact'" class="hover:text-indigo-600 transition">{{ t('contact') }}</button>
+                    <button @click="currentView = 'blog'" class="hover:text-indigo-600 transition">{{ t('newsBlog') }}</button>
+                </div>
+                <div class="md:text-right text-gray-400">
+                    &copy; 2026 BizReview Hub Inc. All rights reserved.
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // UI & Localization States
+                const currentView = ref('directory'); 
+                const loginModalOpen = ref(false); 
+                const currentLang = ref('en');
+
+                // Reactive State Hooks
+                const loading = ref(true);
+                const error = ref(null);
+                const selectedCompanyId = ref(1);
+                const mobileMenuOpen = ref(false);
+
+                // Live Collections (hydrated asynchronously via API emulation)
+                const targetCompanies = ref([]);
+                const targetCustomers = ref([]);
+                const targetReviews = ref([]);
+
+                // Translation Pack Matrix Dictionary
+                const transDictionary = {
+                    en: {
+                        directory: "Directory", aboutUs: "About Us", newsBlog: "News & Blog", support: "Support", contact: "Contact",
+                        signIn: "Sign In", modalSub: "Access directory dashboard credentials", email: "Email Address", securityToken: "Security Key Token", authenticate: "Authenticate Pipeline",
+                        heroTitle: "Verified Corporate Business Directory", heroSub: "Explore active regional businesses, profile setups, and transparent client experiences sourced straight from our system API.",
+                        refreshFeed: "Refresh API Feed", companies: "Companies", available: "Available", reviewers: "Active Reviewers", verifiedStatus: "Platform Status: Verified Active Merchant Profile",
+                        avgRating: "Avg Rating", globalReviews: "global reviews", testimonials: "Customer Testimonials", loading: "Requesting updated payload from API endpoints...",
+                        aboutVision: "Our Platform Core Vision", aboutVisionSub: "Learn about our structural integrity, data matching logic, and commitment to transparency.", aboutDesc: "BizReview Hub bridges the gap between verified local enterprises and clients. We process live API payload records to guarantee that every metrics box, profile index, and feedback log remains fully secure and authentic.",
+                        blogTitle: "Enterprise Insights & News", blogSub: "Stay connected with recent system feature rollouts, directory logs, and industrial shifts.", feedEmpty: "Feed Currently Empty", feedEmptySub: "No administrative communications or article layers have been broadcasted to the repository stack yet.",
+                        supportTitle: "Help Center & Infrastructure", supportSub: "Get troubleshooting pipelines, setup instructions, and data synchronization workflows.", supportHeading: "Operational Systems Support", supportDesc: "Experiencing grid connection discrepancies, payload rendering stalls, or filter matrix issues? Our architectural maintenance framework operates constantly to address structural network queries.",
+                        contactTitle: "Get in Touch With Operations", contactSub: "Submit feedback logs, query profile registrations, or claim active company panels.", contactHeading: "Corporate Relations Grid", contactDesc: "Have design specifications, technical feedback parameters, or administrative queries? Reach out to our engineering and routing team right through the hub pipeline configuration.",
+                        returnDir: "Return to Directory", footerText: "Operational business directory & client experience transparency matrix."
+                    },
+                    ka: {
+                        directory: "კატალოგი", aboutUs: "ჩვენ შესახებ", newsBlog: "სიახლეები & ბლოგი", support: "მხარდაჭერა", contact: "კონტაქტი",
+                        signIn: "შესვლა", modalSub: "პლატფორმის ადმინისტრაციულ პანელზე წვდომა", email: "ელ-ფოსტა", securityToken: "უსაფრთხოების ტოკენი", authenticate: "ავტორიზაციის გავლა",
+                        heroTitle: "ვერიფიცირებული ბიზნეს კატალოგი", heroSub: "გამოიკვლიეთ აქტიური რეგიონალური კომპანიები, პროფილები და გამჭვირვალე მომხმარებელთა გამოხმაურებები პირდაპირ სისტემური API-დან.",
+                        refreshFeed: "მონაცემების განახლება", companies: "კომპანიები", available: "ხელმისაწვდომია", reviewers: "აქტიური რეცენზენტები", verifiedStatus: "პლატფორმის სტატუსი: ვერიფიცირებული აქტიური პროფილი",
+                        avgRating: "საშ. რეიტინგი", globalReviews: "გლობალური შეფასება", testimonials: "კლიენტების გამოხმაურებები", loading: "მიმდინარეობს განახლებული მონაცემების მოთხოვნა API-დან...",
+                        aboutVision: "ჩვენი პლატფორმის ხედვა", aboutVisionSub: "შეიტყვეთ მეტი ჩვენი მონაცემების სტრუქტურის, თავსებადობის ლოგიკისა და გამჭვიрვალობის შესახებ.", aboutDesc: "BizReview Hub აკავშირებს ვერიფიცირებულ ადგილობრივ საწარმოებსა და კლიენტებს. ჩვენ ვამუშავებთ პირდაპირ API ჩანაწერებს, რათა გარანтияრებული იყოს თითოеული პროფილის, ინდექსისა და გამოხმაურების სრული უსაფრთხოება და ავთენტურობა.",
+                        blogTitle: "კორპорატიული სიახლეები", blogSub: "იყავით საქმის კურსში სისტემის ახალი ფუნქციების, კატალოგის ჟურნალებისა და ინდუსტრიული ცვლილებების შესახებ.", feedEmpty: "სიახლეები არ არის", feedEmptySub: "ადმინისტრაციული შეტყობინებები ან სტატიები ჯერჯერობით არ გამოქვეყნებულა საცავში.",
+                        supportTitle: "დახმარების ცენტრი", supportSub: "მიიღეთ პრობლემების აღმოფხვრის გზები, ინსტალაციის ინსტრუქციები და მონაცემთა სინქроნიზაციის პროცესები.", supportHeading: "ოპერაციული სისტემების მხარდაჭერა", supportDesc: "გაქვთ პრობლეма ქსელურ კავშირთან, მონაცემთა ჩატვირთვასთან ან ფилტრაციასთან? ჩვენი ტექნიკური გუნდი მუდმივ რეჟიმში მუშაობს ნებისმიერი ხარვეზის აღმოსაფხვრელად.",
+                        contactTitle: "დაუკავშირდით ოპერაციებს", contactSub: "გამოაგზავნეთ უკუკავშირი, მოითხოვეთ პროფილის რეგისტრაცია ან დაადასტურეთ კომპანიის პანელი.", contactHeading: "კორპორატიული ურთიერთობების ქსელი", contactDesc: "გაქვთ დიზაინის სპეციფიკაციები, ტექნიკური პარამეტრები ან ადმინისტრაციული კითხვები? დაუკავშირდით ჩვენს საინჟინრო გუნდს ჰაბის მილსადენის კონფიგურაციის საშუალებით.",
+                        returnDir: "კატალოგში დაბრუნება", footerText: "ბიზნეს კატალოგი & კლიენტთა გამოცდილების გამჭვირვალობის მატრიცა."
+                    },
+                    ru: {
+                        directory: "Каталог", aboutUs: "О нас", newsBlog: "Новости и Блог", support: "Поддержка", contact: "Контакты",
+                        signIn: "Войти", modalSub: "Доступ к учетным данным панели каталога", email: "Эл. почта", securityToken: "Токен безопасности", authenticate: "Авторизовать поток",
+                        heroTitle: "Верифицированный Каталог Компаний", heroSub: "Изучайте активные региональные предприятия, настройки профилей и прозрачные отзывы клиентов напрямую из нашего системного API.",
+                        refreshFeed: "Обновить API поток", companies: "Компании", available: "Доступно", reviewers: "Активные авторы", verifiedStatus: "Статус платформы: Проверенный активный профиль",
+                        avgRating: "Средний балл", globalReviews: "отзывов", testimonials: "Отзывы Клиентов", loading: "Запрос обновленных данных из конечных точек API...",
+                        aboutVision: "Основная концепция платформы", aboutVisionSub: "Узнайте о нашей структурной целостности, логике сопоставления данных и стремлении к прозрачности.", aboutDesc: "BizReview Hub устраняет разрыв между проверенными местными предприятиями и клиентами. Мы обрабатываем живые записи API данных, чтобы гарантировать полную безопасность и подлинность каждого профиля, индекса и журнала отзывов.",
+                        blogTitle: "Корпоративные Новости", blogSub: "Оставайтесь в курсе последних выпусков функций системы, журналов каталога и промышленных изменений.", feedEmpty: "Лента пуста", feedEmptySub: "Административные сообщения или статьи еще не были опубликованы в репозитории.",
+                        supportTitle: "Центр помощи и Инфраструктура", supportSub: "Получите инструкции по устранению неполадок, настройке и рабочим процессам синхронизации данных.", supportHeading: "Операционная поддержка систем", supportDesc: "Возникли проблемы с сетевым подключением, задержкой рендеринга данных или матрицей фильтров? Наша техническая служба работает постоянно для решения любых структурных сетевых запросов.",
+                        contactTitle: "Связаться с операционным отделом", contactSub: "Отправляйте журналы отзывов, запрашивайте регистрацию профилей или заявляйте права на панели компаний.", contactHeading: "Сеть корпоративных отношений", contactDesc: "Есть технические замечания, спецификации или административные вопросы? Свяжитесь с нашей инженерной командой напрямую через конфигурацию хаба.",
+                        returnDir: "Вернуться в каталог", footerText: "Операционный каталог предприятий и матрица прозрачности клиентского опыта."
+                    }
+                };
+
+                const t = (key) => {
+                    return transDictionary[currentLang.value][key] || transDictionary['en'][key] || key;
+                };
+
+                // --- API CONNECTOR INTERACTION LAYER ---
+                const mockApiFetch = () => {
+                    return new Promise((resolve, reject) => {
+                        setTimeout(() => {
+                            resolve({
+                                companies: [
+                                    { id: 1, name: 'Apex Global', industry: 'Technology', active: true },
+                                    { id: 2, name: 'Sovereign Logistics', industry: 'Transport', active: true },
+                                    { id: 3, name: 'Quantum Labs', industry: 'Healthcare', active: false },
+                                ],
+                                customers: [
+                                    { id: 1, name: 'John Doe', email: 'john@example.com', active: true },
+                                    { id: 2, name: 'Jane Smith', email: 'jane@example.com', active: true },
+                                    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', active: false },
+                                ],
+                                reviews: [
+                                    { id: 1, customerName: 'John Doe', companyId: 1, comment: 'Amazing software solutions, helped our efficiency drastically!', rating: 5, visible: true },
+                                    { id: 2, customerName: 'Jane Smith', companyId: 2, comment: 'Shipping was delayed by two days. Customer service was okay.', rating: 3, visible: true },
+                                    { id: 3, customerName: 'John Doe', companyId: 2, comment: 'Clean tracks, super organized dispatcher systems!', rating: 5, visible: true },
+                                    { id: 4, customerName: 'Bob Johnson', companyId: 1, comment: 'Spammy interface. Critical failure.', rating: 1, visible: false },
+                                ]
+                            });
+                        }, 800);
+                    });
+                };
+
+                const loadDashboardPayload = async () => {
+                    loading.value = true;
+                    error.value = null;
+                    try {
+                        const data = await mockApiFetch();
+                        
+                        targetCompanies.value = data.companies.filter(c => c.active);
+                        targetCustomers.value = data.customers.filter(cust => cust.active);
+                        targetReviews.value = data.reviews;
+
+                        if(targetCompanies.value.length > 0) {
+                            selectedCompanyId.value = targetCompanies.value[0].id;
+                        }
+                    } catch (err) {
+                        error.value = "Failed to sync databases over HTTP network stack. Check configurations.";
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const refreshData = () => {
+                    loadDashboardPayload();
+                };
+
+                // --- COMPUTED DATA ENGINE ---
+                const activeCompany = computed(() => {
+                    return targetCompanies.value.find(c => c.id === selectedCompanyId.value);
+                });
+
+                const filteredReviews = computed(() => {
+                    return targetReviews.value.filter(r => r.companyId === selectedCompanyId.value && r.visible === true);
+                });
+
+                const companyAverageRating = computed(() => {
+                    const list = filteredReviews.value;
+                    if (!list.length) return "0.0";
+                    const total = list.reduce((sum, r) => sum + r.rating, 0);
+                    return (total / list.length).toFixed(1);
+                });
+
+                onMounted(() => {
+                    loadDashboardPayload();
+                });
+
+                return {
+                    currentView,
+                    loginModalOpen,
+                    currentLang,
+                    t,
+                    loading,
+                    error,
+                    selectedCompanyId,
+                    mobileMenuOpen,
+                    targetCompanies,
+                    targetCustomers,
+                    activeCompany,
+                    filteredReviews,
+                    companyAverageRating,
+                    refreshData
+                };
+            }
+        }).mount('#app');
+    </script>
+
+    <style>
+        [v-cloak] { display: none; }
+        .animate-spin-slow { animation: spin 4s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</body>
+</html>
